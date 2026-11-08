@@ -1,0 +1,11 @@
+# 替换成你的域名；Caddy 自动申请/续期 TLS
+workshop.example.com {
+    encode zstd gzip
+    request_body {
+        max_size 40MB
+    }
+    reverse_proxy 127.0.0.1:27193
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    }
+}

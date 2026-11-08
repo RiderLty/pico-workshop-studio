@@ -1,0 +1,42 @@
+{
+  "name": "pico-workshop-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Lua 创意工坊的作者侧管理工具：模块/整合包编辑、草稿发布、历史回滚、ZIP/JSON 导出、单管理员公网托管",
+  "license": "GPL-3.0",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "dev": "node scripts/dev.mjs",
+    "dev:server": "node --disable-warning=ExperimentalWarning server/index.js",
+    "dev:web": "vite --config web/vite.config.js",
+    "build": "vite build --config web/vite.config.js",
+    "test": "node --test server/test/*.test.js",
+    "cli": "node server/cli.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.6",
+    "fflate": "^0.8.2",
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "@codemirror/commands": "^6.7.1",
+    "@codemirror/language": "^6.10.8",
+    "@codemirror/legacy-modes": "^6.5.3",
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/view": "^6.36.1",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^5.16.14",
+    "@mui/material": "^5.16.14",
+    "@vitejs/plugin-react": "^4.3.4",
+    "codemirror": "^6.0.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-router-dom": "^6.28.1",
+    "vite": "^5.4.21"
+  }
+}

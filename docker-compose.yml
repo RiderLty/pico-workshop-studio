@@ -1,0 +1,44 @@
+services:
+  studio:
+    build: .
+    image: pico-workshop-studio:latest
+    container_name: pico-workshop-studio
+    restart: unless-stopped
+    init: true
+
+    # 与 /root/appdata 的既有约定一致：host 网络，只监听 127.0.0.1:27193，
+    # 由 host 网络里的 nginx 容器反代。不要在 .env 里把 HOST 改成 0.0.0.0。
+    network_mode: host
+
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DATA_DIR: /data
+
+    volumes:
+      # 数据放在 /root/appdata/pico-workshop-studio/data，便于备份/迁移
+      - ./data:/data
+
+    mem_limit: 256m
+    memswap_limit: 256m
+
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:'+(process.env.PORT||8080)+'/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

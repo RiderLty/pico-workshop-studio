@@ -87,6 +87,18 @@ docker compose -f docker-compose.ghcr.yml pull
 docker compose -f docker-compose.ghcr.yml up -d
 ```
 
+Docker Hub 镜像（配置了对应 Secrets 后）：
+
+```
+docker.io/<你的 Docker Hub 用户名>/pico-workshop-studio:latest
+```
+
+用 Docker Hub 时在 `.env` 里覆盖：
+
+```bash
+STUDIO_IMAGE=docker.io/<用户名>/pico-workshop-studio:latest
+```
+
 ### Token / Secrets
 
 **默认不需要填写任何 token。** Release workflow 使用 GitHub 自动提供的 `GITHUB_TOKEN`：
@@ -99,7 +111,7 @@ docker compose -f docker-compose.ghcr.yml up -d
 | 场景 | 需要 |
 |---|---|
 | GHCR 包是 private，服务器要拉 | classic PAT（勾 `read:packages`），服务器 `docker login ghcr.io -u RiderLty -p <PAT>`；或把包设为 public（推荐，无需 token） |
-| 想同时推 Docker Hub | 仓库 Secrets 加 `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN`（当前 workflow 未配置这一步） |
+| 想同时推 Docker Hub | 仓库 Secrets 加 `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN`（Docker Hub Access Token，Read & Write）；workflow 已内置可选步骤，未配置则自动跳过 |
 | 想手动触发镜像构建（不打 tag） | Actions → Release → Run workflow，无需额外 token |
 
 > GHCR 包首次发布后若仍是 private，可在 GitHub → Packages → `pico-workshop-studio` → Package settings 改为 public；workflow 里的 `Make GHCR package public` 步骤也会尝试自动改，失败不影响镜像。

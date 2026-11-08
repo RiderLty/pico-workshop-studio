@@ -10,6 +10,11 @@ permissions:
   contents: write
   packages: write
 
+env:
+  # Docker Hub 是可选的：未配置这两个 Secret 时相关步骤自动跳过。
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -71,6 +76,37 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Login Docker Hub (optional)
+        if: ${{ env.DOCKERHUB_USERNAME != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
+
+      - name: Docker Hub metadata (optional)
+        if: ${{ env.DOCKERHUB_USERNAME != '' }}
+        id: meta_dh
+        uses: docker/metadata-action@v5
+        with:
+          images: docker.io/${{ env.DOCKERHUB_USERNAME }}/pico-workshop-studio
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push Docker Hub (optional)
+        if: ${{ env.DOCKERHUB_USERNAME != '' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta_dh.outputs.tags }}
+          labels: ${{ steps.meta_dh.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

@@ -6,7 +6,7 @@
 # .env 与 docker-compose.yml 共用（PUBLIC_BASE_URL / HOST / PORT / ADMIN_* / SESSION_SECRET）。
 services:
   studio:
-    image: ghcr.io/riderlty/pico-workshop-studio:${STUDIO_IMAGE_TAG:-latest}
+    image: ${STUDIO_IMAGE:-ghcr.io/riderlty/pico-workshop-studio:latest}
     container_name: pico-workshop-studio
     restart: unless-stopped
     init: true

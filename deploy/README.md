@@ -19,15 +19,16 @@ VPS 上不跑 npm/Vite，只运行 Docker：
 ## 2. 推到 VPS
 
 ```bash
-rsync -az --delete deploy/dist/ root@1.13.189.140:/root/appdata/pico-workshop-studio/
+tar -C deploy/dist -czf - . | ssh root@1.13.189.140 \
+  'tar -xzf - -C /root/appdata/pico-workshop-studio'
 ssh root@1.13.189.140 'mkdir -p /root/appdata/pico-workshop-studio/data && chown -R 10001:10001 /root/appdata/pico-workshop-studio/data'
 ```
 
-首次部署还需要 `.env`（不要提交）：
+首次部署还需要 `.env`（不要提交；dist 里带 `.env.example`）：
 
 ```bash
 cd /root/appdata/pico-workshop-studio
-cp /path/to/.env.example .env
+cp .env.example .env
 chmod 600 .env
 # 至少改：
 #   PUBLIC_BASE_URL=https://workshop.rd5isto.top
@@ -81,5 +82,5 @@ curl -i https://workshop.rd5isto.top/w/main/ws.json
 
 - 数据库：`docker compose exec studio node server/cli.js backup`（产物在 `data/backups/`）
 - 数据/资源：直接备份 `/root/appdata/pico-workshop-studio/data/`
-- 升级：本地重新 `./deploy/build-dist.sh` → rsync → `docker compose up -d --build`
+- 升级：本地重新 `./deploy/build-dist.sh` → tar 推送到 VPS → `docker compose up -d --build`
 - 改密：`docker compose exec studio node server/cli.js set-password '新密码'`（旧会话立即失效）

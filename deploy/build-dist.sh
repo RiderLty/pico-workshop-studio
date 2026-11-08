@@ -13,7 +13,7 @@ npm run build
 echo "[3/5] 组装 deploy/dist"
 rm -rf deploy/dist
 mkdir -p deploy/dist/web
-cp package.json package-lock.json deploy/dist/
+cp package.json package-lock.json .env.example deploy/dist/
 cp -R server deploy/dist/
 cp -R web/dist deploy/dist/web/dist
 
@@ -26,4 +26,4 @@ cp deploy/docker-compose.runtime.yml deploy/dist/docker-compose.yml
 
 echo "完成：deploy/dist"
 du -sh deploy/dist
-echo "下一步：rsync -az --delete deploy/dist/ root@<VPS>:/root/appdata/pico-workshop-studio/"
+echo "下一步：tar -C deploy/dist -czf - . | ssh root@<VPS> \"tar -xzf - -C /root/appdata/pico-workshop-studio\""

@@ -45,7 +45,8 @@ VPS 上不跑 npm/Vite，前端在本地构建好再推：
 
 ```bash
 ./deploy/build-dist.sh
-rsync -az --delete deploy/dist/ root@<VPS>:/root/appdata/pico-workshop-studio/
+tar -C deploy/dist -czf - . | ssh root@<VPS> \
+  'tar -xzf - -C /root/appdata/pico-workshop-studio'
 ssh root@<VPS> 'cd /root/appdata/pico-workshop-studio && docker compose up -d --build'
 ```
 
@@ -148,7 +149,7 @@ session.key           # 未设置 SESSION_SECRET 时自动生成
 ```
 
 - 数据库备份：`node server/cli.js backup`（`VACUUM INTO`，WAL 一致）。
-- assets 不可变，建议同时用卷快照 / `rsync` 备份。
+- assets 不可变，建议同时用卷快照 / `tar` 备份。
 - 恢复：停容器 → 替换 `workshop.db`（删掉 `-wal/-shm`）→ 恢复/保留 `assets/` → 启动 → `/healthz` 与公开 URL 抽查。
 - 只恢复 DB 而丢 assets 会让旧发布 404。详见 `docs/BACKUP_RESTORE.md`。
 

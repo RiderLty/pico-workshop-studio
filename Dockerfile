@@ -1,17 +1,17 @@
 # 多阶段：构建 SPA → 只装生产依赖 → 非 root 运行
-FROM node:24-bookworm-slim AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:24-bookworm-slim AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-FROM node:24-bookworm-slim
+FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
@@ -23,7 +23,8 @@ COPY package*.json ./
 COPY server ./server
 COPY --from=build /app/web/dist ./web/dist
 
-RUN useradd -r -u 10001 app \
+RUN addgroup -g 10001 -S app \
+    && adduser -u 10001 -S -G app app \
     && mkdir -p /data \
     && chown -R app:app /app /data
 

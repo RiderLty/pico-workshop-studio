@@ -4,7 +4,7 @@ Lua 创意工坊的**作者侧管理工具**：在 VPS 的 Docker 里跑，单�
 
 - 协议权威：`pico-hid-mapper/docs/LUA_WORKSHOP.md`
 - 许可证：GPL-3.0
-- 单进程、零原生依赖：Node 22.5+（Docker 镜像用 Node 24）+ SQLite（`node:sqlite`）+ 内容寻址资源库
+- 单进程、零原生依赖：Node 22.5+（Docker 镜像用 Node 22 Alpine，22.23）+ SQLite（`node:sqlite`）+ 内容寻址资源库
 
 ## 功能
 

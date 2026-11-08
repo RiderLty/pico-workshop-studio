@@ -25,7 +25,8 @@ docker compose pull
 docker compose up -d
 ```
 
-想固定版本就在 `.env` 里加 `STUDIO_IMAGE=ghcr.io/riderlty/pico-workshop-studio:v0.1.0`；不设置则用 GHCR latest。Docker Hub 同理：`STUDIO_IMAGE=docker.io/<用户名>/pico-workshop-studio:latest`。
+想固定版本就在 `.env` 里加 `STUDIO_IMAGE=ghcr.io/riderlty/pico-workshop-studio:0.1.0`；不设置则用 GHCR latest。Docker Hub 同理：`STUDIO_IMAGE=docker.io/<用户名>/pico-workshop-studio:latest`。
+VPS 上推荐走 GHCR 加速：`STUDIO_IMAGE=ghcr.nju.edu.cn/riderlty/pico-workshop-studio:latest`。
 GHCR 包默认可能是 private：要么在 GitHub Packages 页面设为 public（推荐），
 要么在 VPS 上 `docker login ghcr.io -u RiderLty -p <带 read:packages 的 PAT>`。
 

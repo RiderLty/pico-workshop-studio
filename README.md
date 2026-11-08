@@ -69,7 +69,7 @@ git push origin v0.1.0
 
 ```
 ghcr.io/riderlty/pico-workshop-studio:latest
-ghcr.io/riderlty/pico-workshop-studio:v0.1.0
+ghcr.io/riderlty/pico-workshop-studio:0.1.0
 ```
 
 服务器上直接拉镜像运行（不需要源码 / npm / Vite）：

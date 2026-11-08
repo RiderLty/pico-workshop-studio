@@ -129,7 +129,7 @@ jobs:
             Docker 镜像：
 
             ```
-            ghcr.io/riderlty/pico-workshop-studio:${{ github.ref_name }}
+            ghcr.io/riderlty/pico-workshop-studio:${{ steps.meta.outputs.version }}
             ghcr.io/riderlty/pico-workshop-studio:latest
             ```
 

@@ -1,6 +1,7 @@
 // ---------------------------------------------------------------------------
 // HTTP 路由：管理 API（/api，需登录 + CSRF）、公开只读（/w，CORS *）、SPA 静态。
 // ---------------------------------------------------------------------------
+import fs from 'node:fs';
 import { Hono } from 'hono';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { nowIso, getSetting, setSetting, audit } from './db.js';
@@ -17,6 +18,7 @@ import { publish, rollback } from './publish.js';
 import { buildExport, exportZip, EXPORT_LEVELS } from './export.js';
 import { getAsset, readAsset, saveAsset } from './store.js';
 
+const APP_VERSION = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 const MAX_SCRIPT = 1024 * 1024;
 const MAX_ICON = 256 * 1024;
 
@@ -773,7 +775,7 @@ export function createApp({ db, config }) {
     // ── 健康检查 ──
     app.get('/healthz', (c) => {
         const schema = db.prepare('SELECT MAX(version) AS v FROM schema_migrations').get();
-        return c.json({ ok: true, version: '0.1.0', schemaVersion: schema?.v ?? 0, uptime: process.uptime() });
+        return c.json({ ok: true, version: APP_VERSION, schemaVersion: schema?.v ?? 0, uptime: process.uptime() });
     });
 
     // ── 管理 API 兜底 ──

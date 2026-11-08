@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import { loadConfig } from './config.js';
 import { openDb, migrate, nowIso, getSetting, setSetting } from './db.js';
 import { hashPassword, authVersion } from './auth.js';
+import { gcAssets } from './gc.js';
 
 const [cmd, ...args] = process.argv.slice(2);
 const config = loadConfig();
@@ -16,9 +17,12 @@ function usage() {
   node server/cli.js hash-password <密码>
   node server/cli.js set-password <密码>
   node server/cli.js backup
+  node server/cli.js gc [--delete] [--grace-hours=24]
 
 set-password 会递增 auth_version，旧登录会话立即失效。
-backup 会生成 data/backups/workshop-<时间>.db（SQLite VACUUM INTO）。`);
+backup 会生成 data/backups/workshop-<时间>.db（SQLite VACUUM INTO）。
+gc 默认 dry-run，只列出未引用资源；--delete 才删除数据库记录与磁盘文件。
+只有不被任何草稿/发布引用的资源才会被删；默认跳过 24h 内新建的资源。`);
 }
 
 if (cmd === 'hash-password') {
@@ -38,6 +42,21 @@ if (cmd === 'set-password') {
     if (!getSetting(db, 'admin.username')) setSetting(db, 'admin.username', config.adminUsername);
     db.close();
     console.log('已更新管理员密码，旧会话已失效。');
+    process.exit(0);
+}
+
+if (cmd === 'gc') {
+    const deleteFiles = args.includes('--delete');
+    const graceArg = args.find(a => a.startsWith('--grace-hours='));
+    const graceHours = graceArg ? Number(graceArg.split('=')[1]) : 24;
+    if (!Number.isFinite(graceHours) || graceHours < 0) {
+        console.error('--grace-hours 必须是非负数字');
+        process.exit(1);
+    }
+    const db = openDb(config.dbPath);
+    migrate(db);
+    gcAssets(db, config, { graceHours, deleteFiles });
+    db.close();
     process.exit(0);
 }
 

@@ -107,3 +107,21 @@ curl -i https://workshop.rd5isto.top/w/main/ws.json
 - 数据/资源：直接备份 `/root/appdata/pico-workshop-studio/data/`
 - 升级：本地重新 `./deploy/build-dist.sh` → tar 推送到 VPS → `docker compose up -d --build`
 - 改密：`docker compose exec studio node server/cli.js set-password '新密码'`（旧会话立即失效）
+
+## 7. 资源回收
+
+`data/assets/` 只增不减；删掉旧发布记录后，旧版本独占的资源才会变成未引用。
+
+```bash
+# dry-run：只列出未引用资源
+docker compose exec -T studio node server/cli.js gc
+# 真正删除（DB 记录 + 磁盘文件）
+docker compose exec -T studio node server/cli.js gc --delete
+```
+
+GC 只删除不被任何草稿/发布引用的资源，默认跳过 24h 内新建的资源。
+建议每周日 4 点：
+
+```cron
+0 4 * * 0 cd /root/appdata/pico-workshop-studio && docker compose exec -T studio node server/cli.js gc --delete >> /var/log/pico-workshop-gc.log 2>&1
+```

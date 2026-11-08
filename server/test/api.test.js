@@ -10,6 +10,8 @@ import path from 'node:path';
 import { loadConfig } from '../config.js';
 import { openDb, migrate } from '../db.js';
 import { createApp } from '../app.js';
+import { gcAssets, listUnreferencedAssets } from '../gc.js';
+import { assetDiskPath } from '../store.js';
 
 const ORIGIN = 'http://localhost:8099';
 const PASSWORD = 'test-password-123';
@@ -59,7 +61,7 @@ async function json(app, method, url, auth, body) {
 }
 
 test('完整发布链路', async (t) => {
-    const { app, db, dir } = makeApp();
+    const { app, db, config, dir } = makeApp();
     t.after(() => { try { db.close(); } catch { /* ignore */ } fs.rmSync(dir, { recursive: true, force: true }); });
 
     const auth = await login(app);
@@ -154,6 +156,30 @@ test('完整发布链路', async (t) => {
     assert.equal(delCurrent.status, 409);
     const list = await json(app, 'GET', `/api/workshops/${ws.id}/releases`, auth);
     assert.deepEqual(list.releases.map(r => r.revision).sort((a, b) => a - b), [2, 3]);
+
+    // 把草稿改成 code3，再删掉 v2：v2 独占的 code2 资源应变成未引用，GC 可回收
+    const code2 = code + '-- v2\n';
+    const code3 = code + '-- v3-draft\n';
+    await app.request(`/api/workshops/${ws.id}/modules/${mod.id}/content`, {
+        method: 'PUT',
+        headers: headers(auth, { 'content-type': 'text/plain; charset=utf-8' }),
+        body: code3,
+    });
+    const delV2 = await app.request(`/api/workshops/${ws.id}/releases/2`, {
+        method: 'DELETE', headers: headers(auth),
+    });
+    assert.equal(delV2.status, 200);
+
+    const orphans = listUnreferencedAssets(db, { graceHours: 0 });
+    const orphan = orphans.find(a => a.size_bytes === Buffer.byteLength(code2));
+    assert.ok(orphan, '被删发布的独占资源应成为未引用');
+    const orphanPath = assetDiskPath(config, orphan);
+    assert.ok(fs.existsSync(orphanPath), 'GC 前资源文件应存在');
+
+    const gc = gcAssets(db, config, { graceHours: 0, deleteFiles: true, log: () => {} });
+    assert.ok(gc.deleted >= 1);
+    assert.equal(fs.existsSync(orphanPath), false, 'GC 后资源文件应删除');
+    assert.equal((await app.request('/w/demo/ws.json')).status, 200, 'GC 不影响当前发布目录头');
 });
 
 test('认证与 CSRF', async (t) => {

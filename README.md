@@ -235,6 +235,23 @@ session.key           # 未设置 SESSION_SECRET 时自动生成
 - 恢复：停容器 → 替换 `workshop.db`（删掉 `-wal/-shm`）→ 恢复/保留 `assets/` → 启动 → `/healthz` 与公开 URL 抽查。
 - 只恢复 DB 而丢 assets 会让旧发布 404。详见 `docs/BACKUP_RESTORE.md`。
 
+### 资源回收
+
+`assets/` 只增不减；删除旧发布记录后，旧版本独占的文件才会变成未引用。VPS 上：
+
+```bash
+docker compose exec -T studio node server/cli.js gc           # dry-run，先看会删什么
+docker compose exec -T studio node server/cli.js gc --delete  # 真正删除
+```
+
+GC 只删除**不被任何草稿模块/整合包、也不被任何发布版本引用**的资源，默认跳过 24 小时内新建的资源；当前版本和草稿正在用的文件不会动。建议每周跑一次：
+
+```cron
+0 4 * * 0 cd /root/appdata/pico-workshop-studio && docker compose exec -T studio node server/cli.js gc --delete >> /var/log/pico-workshop-gc.log 2>&1
+```
+
+> 如果旧发布记录还在，它的资源会被保留（为了历史和回滚）。要回收旧版本资源，先在后台「发布历史」删除不再需要的版本，再跑 gc。
+
 ## 部署
 
 - VPS / appdata / nginx / 预构建产物：见 `deploy/README.md`

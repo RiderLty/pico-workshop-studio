@@ -1,6 +1,6 @@
 {
   "name": "pico-workshop-studio",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "description": "Lua 创意工坊的作者侧管理工具：模块/整合包编辑、草稿发布、历史回滚、ZIP/JSON 导出、单管理员公网托管",

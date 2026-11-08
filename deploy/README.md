@@ -7,7 +7,29 @@
 - 数据：`/root/appdata/pico-workshop-studio/data`（映射到容器 `/data`）
 - nginx：宿主 nginx 容器（`/root/appdata/nginx`，host 网络）反代 `workshop.rd5isto.top`
 
-## 1. 本地构建预构建产物
+## 0. 直接用 GHCR 镜像（推荐）
+
+打 `v*` tag 后 GitHub Actions 会把镜像推到：
+
+```
+ghcr.io/riderlty/pico-workshop-studio:latest
+ghcr.io/riderlty/pico-workshop-studio:vX.Y.Z
+```
+
+VPS 上不需要源码，只要 `.env`、`data/` 和 compose：
+
+```bash
+cd /root/appdata/pico-workshop-studio
+cp /path/to/docker-compose.ghcr.yml docker-compose.yml
+docker compose pull
+docker compose up -d
+```
+
+想固定版本就在 `.env` 里加 `STUDIO_IMAGE_TAG=v0.1.0`；不设置则用 `latest`。
+GHCR 包默认可能是 private：要么在 GitHub Packages 页面设为 public（推荐），
+要么在 VPS 上 `docker login ghcr.io -u RiderLty -p <带 read:packages 的 PAT>`。
+
+## 1. 本地构建预构建产物（离线 / 自定义）
 
 VPS 上不跑 npm/Vite，只运行 Docker：
 

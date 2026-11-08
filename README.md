@@ -52,6 +52,58 @@ ssh root@<VPS> 'cd /root/appdata/pico-workshop-studio && docker compose up -d --
 
 详见 `deploy/README.md`。
 
+### 用 GitHub Actions 构建的镜像部署
+
+标签 `v*` 会触发 Release workflow：
+
+- 跑测试、构建预构建产物；
+- 构建并推送多架构镜像到 GHCR（`linux/amd64,linux/arm64`）；
+- 创建 GitHub Release，附 `pico-workshop-studio-dist.tar.gz` 与 sha256。
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+镜像地址：
+
+```
+ghcr.io/riderlty/pico-workshop-studio:latest
+ghcr.io/riderlty/pico-workshop-studio:v0.1.0
+```
+
+服务器上直接拉镜像运行（不需要源码 / npm / Vite）：
+
+```bash
+cp docker-compose.ghcr.yml docker-compose.yml
+docker compose pull
+docker compose up -d
+```
+
+也可以保留文件名：
+
+```bash
+docker compose -f docker-compose.ghcr.yml pull
+docker compose -f docker-compose.ghcr.yml up -d
+```
+
+### Token / Secrets
+
+**默认不需要填写任何 token。** Release workflow 使用 GitHub 自动提供的 `GITHUB_TOKEN`：
+
+- `packages: write`：推送 GHCR
+- `contents: write`：创建 GitHub Release
+
+只有这些情况需要额外配置：
+
+| 场景 | 需要 |
+|---|---|
+| GHCR 包是 private，服务器要拉 | classic PAT（勾 `read:packages`），服务器 `docker login ghcr.io -u RiderLty -p <PAT>`；或把包设为 public（推荐，无需 token） |
+| 想同时推 Docker Hub | 仓库 Secrets 加 `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN`（当前 workflow 未配置这一步） |
+| 想手动触发镜像构建（不打 tag） | Actions → Release → Run workflow，无需额外 token |
+
+> GHCR 包首次发布后若仍是 private，可在 GitHub → Packages → `pico-workshop-studio` → Package settings 改为 public；workflow 里的 `Make GHCR package public` 步骤也会尝试自动改，失败不影响镜像。
+
 ## 本地运行
 
 ```bash

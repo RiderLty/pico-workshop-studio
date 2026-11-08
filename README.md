@@ -113,8 +113,26 @@ STUDIO_IMAGE=docker.io/<用户名>/pico-workshop-studio:latest
 | GHCR 包是 private，服务器要拉 | classic PAT（勾 `read:packages`），服务器 `docker login ghcr.io -u RiderLty -p <PAT>`；或把包设为 public（推荐，无需 token） |
 | 想同时推 Docker Hub | 仓库 Secrets 加 `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN`（Docker Hub Access Token，Read & Write）；workflow 已内置可选步骤，未配置则自动跳过 |
 | 想手动触发镜像构建（不打 tag） | Actions → Release → Run workflow，无需额外 token |
+| 清理 GHCR 旧版本报 403 | 仓库 Secrets 加 `GHCR_CLEANUP_TOKEN`（classic PAT，勾 `read:packages` + `delete:packages`）；默认先用 `GITHUB_TOKEN` |
 
 > GHCR 包首次发布后若仍是 private，可在 GitHub → Packages → `pico-workshop-studio` → Package settings 改为 public；workflow 里的 `Make GHCR package public` 步骤也会尝试自动改，失败不影响镜像。
+
+### 删除旧版本
+
+**工坊发布历史**：后台「发布历史」页可以删除非当前版本；当前公开版本不能删（先发布或回滚到别的版本）。
+只删除发布记录，不回收已上传的不可变资源文件。
+
+**GHCR 镜像 / GitHub Release**：Actions → **Cleanup old versions** → Run workflow，参数：
+
+- `keep`：保留多少个旧版本（默认 5；`latest` 永远保留）
+- `dry_run`：默认 `true`，只打印要删的内容
+- `delete_releases`：默认 `false`；勾选后同时删除旧 GitHub Release 与 tag
+
+手动触发：
+
+```bash
+gh workflow run cleanup.yml -f keep=5 -f dry_run=true
+```
 
 ## 本地运行
 

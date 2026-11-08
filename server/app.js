@@ -661,6 +661,22 @@ export function createApp({ db, config }) {
         return c.json(r);
     });
 
+    // 删除旧发布版本：当前公开版本不允许删（先发布/回滚到别的版本），
+    // 其余历史修订可删；release_assets 随 releases 级联删除，资源文件本身不可变、不回收。
+    app.delete('/api/workshops/:id/releases/:revision', (c) => {
+        const w = getWorkshop(db, c.req.param('id'));
+        if (!w) return c.json({ error: { code: 'NOT_FOUND', message: '工坊不存在' } }, 404);
+        const revision = Number(c.req.param('revision'));
+        if (revision === w.published_revision) {
+            return c.json({ error: { code: 'CURRENT_RELEASE', message: '不能删除当前正在公开的版本；请先发布或回滚到其他版本' } }, 409);
+        }
+        const r = db.prepare('SELECT id FROM releases WHERE workshop_id = ? AND revision = ?').get(w.id, revision);
+        if (!r) return c.json({ error: { code: 'NOT_FOUND', message: '修订不存在' } }, 404);
+        db.prepare('DELETE FROM releases WHERE id = ?').run(r.id);
+        audit(db, 'release.delete', `${w.slug}@v${revision}`, clientIp(c, config));
+        return c.json({ ok: true });
+    });
+
     // ── 导出 ──
     app.get('/api/workshops/:id/export/ws.json', (c) => {
         const w = getWorkshop(db, c.req.param('id'));

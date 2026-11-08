@@ -1,0 +1,102 @@
+name: Cleanup old versions
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: '保留多少个旧版本（latest 永远保留）'
+        default: '5'
+        required: true
+      dry_run:
+        description: '只打印要删除的内容，不实际删除'
+        type: boolean
+        default: true
+      delete_releases:
+        description: '同时删除旧 GitHub Release 与对应 tag'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      # 默认用 GitHub 自动 token；若删除 user-owned package 报 403，
+      # 在仓库 Secrets 加 GHCR_CLEANUP_TOKEN（classic PAT，勾 read:packages + delete:packages）。
+      GH_TOKEN: ${{ secrets.GHCR_CLEANUP_TOKEN || secrets.GITHUB_TOKEN }}
+      PACKAGE: pico-workshop-studio
+    steps:
+      - name: Prune GHCR image versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEEP="${{ inputs.keep }}"
+          DRY="${{ inputs.dry_run }}"
+          if ! [[ "$KEEP" =~ ^[0-9]+$ ]]; then
+            echo "keep 必须是整数"; exit 1
+          fi
+
+          gh api --paginate "/user/packages/container/${PACKAGE}/versions" > versions.json
+          jq -r '.[] | [.id, .created_at, ((.metadata.container.tags // []) | join(","))] | @tsv' versions.json \
+            | sort -t$'\t' -k2,2r > sorted.tsv
+
+          LATEST_ID=$(awk -F'\t' '$3 ~ /(^|,)latest(,|$)/ {print $1; exit}' sorted.tsv)
+          echo "当前版本数：$(wc -l < sorted.tsv)；latest version id：${LATEST_ID:-无}"
+
+          # 非 latest 的版本按创建时间从新到旧，保留前 KEEP 个，其余删除
+          awk -F'\t' -v keep="$KEEP" -v latest="$LATEST_ID" '
+            $1 == latest { next }
+            { n++; if (n > keep) print $1 "\t" $3 }
+          ' sorted.tsv > to-delete.tsv
+
+          if [ ! -s to-delete.tsv ]; then
+            echo "没有需要删除的镜像版本"
+            exit 0
+          fi
+
+          while IFS=$'\t' read -r id tags; do
+            [ -z "$id" ] && continue
+            if [ "$DRY" = "true" ]; then
+              echo "[dry-run] 删除镜像版本 ${id} (${tags})"
+            else
+              gh api --method DELETE "/user/packages/container/${PACKAGE}/versions/${id}"
+              echo "已删除镜像版本 ${id} (${tags})"
+            fi
+          done < to-delete.tsv
+
+      - name: Prune old GitHub Releases
+        if: ${{ inputs.delete_releases }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          KEEP="${{ inputs.keep }}"
+          DRY="${{ inputs.dry_run }}"
+
+          gh release list --limit 100 --json tagName,createdAt,isLatest \
+            --jq '.[] | [.tagName, .createdAt, .isLatest] | @tsv' \
+            | sort -t$'\t' -k2,2r > releases.tsv
+
+          awk -F'\t' -v keep="$KEEP" '
+            $3 == "true" { next }
+            { n++; if (n > keep) print $1 }
+          ' releases.tsv > release-delete.txt
+
+          if [ ! -s release-delete.txt ]; then
+            echo "没有需要删除的 Release"
+            exit 0
+          fi
+
+          while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            if [ "$DRY" = "true" ]; then
+              echo "[dry-run] 删除 Release 与 tag：${tag}"
+            else
+              gh release delete "$tag" --yes --cleanup-tag
+              echo "已删除 Release 与 tag：${tag}"
+            fi
+          done < release-delete.txt

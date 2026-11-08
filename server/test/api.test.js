@@ -142,6 +142,18 @@ test('完整发布链路', async (t) => {
     assert.equal((await app.request('/w/demo/items.json')).status, 404);
     assert.equal((await app.request('/w/demo/' + items.modules[0].url)).status, 404);
     assert.equal((await app.request('/w/demo/ws.json')).status, 200);
+
+    // 删除旧版本：当前公开版本 v3 不能删，v1 可以删
+    const delOld = await app.request(`/api/workshops/${ws.id}/releases/1`, {
+        method: 'DELETE', headers: headers(auth),
+    });
+    assert.equal(delOld.status, 200);
+    const delCurrent = await app.request(`/api/workshops/${ws.id}/releases/3`, {
+        method: 'DELETE', headers: headers(auth),
+    });
+    assert.equal(delCurrent.status, 409);
+    const list = await json(app, 'GET', `/api/workshops/${ws.id}/releases`, auth);
+    assert.deepEqual(list.releases.map(r => r.revision).sort((a, b) => a - b), [2, 3]);
 });
 
 test('认证与 CSRF', async (t) => {

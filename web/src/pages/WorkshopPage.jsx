@@ -725,9 +725,10 @@ function HostingTab({ workshop, onSaved, notify }) {
     );
 }
 
-function HistoryTab({ workshopId, releases, onRefresh, notify }) {
+function HistoryTab({ workshopId, releases, current, onRefresh, notify }) {
     const [viewing, setViewing] = useState(null);
     const [rolling, setRolling] = useState(null);
+    const [deleting, setDeleting] = useState(null);
     const [busy, setBusy] = useState(false);
 
     const view = async (r) => {
@@ -746,6 +747,16 @@ function HistoryTab({ workshopId, releases, onRefresh, notify }) {
             notify(e.message, 'error');
         } finally { setBusy(false); setRolling(null); }
     };
+    const remove = async () => {
+        setBusy(true);
+        try {
+            await api.del(`/api/workshops/${workshopId}/releases/${deleting.revision}`);
+            notify(`已删除旧版本 v${deleting.revision}`);
+            onRefresh();
+        } catch (e) {
+            notify(e.message, 'error');
+        } finally { setBusy(false); setDeleting(null); }
+    };
 
     return (
         <Box>
@@ -761,13 +772,18 @@ function HistoryTab({ workshopId, releases, onRefresh, notify }) {
                     <TableBody>
                         {releases.map(r => (
                             <TableRow key={r.revision} hover>
-                                <TableCell><Chip size="small" label={`v${r.revision}`} /></TableCell>
+                                <TableCell>
+                                    <Chip size="small" label={`v${r.revision}`} />
+                                    {r.revision === current && <Chip size="small" variant="outlined" color="primary" label="当前" sx={{ ml: 0.5 }} />}
+                                </TableCell>
                                 <TableCell>{r.note || '—'}</TableCell>
                                 <TableCell>{new Date(r.created_at).toLocaleString()}</TableCell>
                                 <TableCell>{r.items_bytes}</TableCell>
                                 <TableCell align="right">
                                     <Button size="small" onClick={() => view(r)}>查看</Button>
                                     <Button size="small" color="warning" onClick={() => setRolling(r)}>回滚</Button>
+                                    <Button size="small" color="error" disabled={r.revision === current}
+                                        onClick={() => setDeleting(r)}>删除</Button>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -790,6 +806,9 @@ function HistoryTab({ workshopId, releases, onRefresh, notify }) {
             <ConfirmDialog open={!!rolling} title="回滚"
                 text={rolling ? `回滚到 v${rolling.revision} 会生成一个新的修订（v${rolling.revision} 之后的最新版本），不会改写历史。` : ''}
                 confirmLabel="回滚" busy={busy} onClose={() => setRolling(null)} onConfirm={rollback} />
+            <ConfirmDialog open={!!deleting} danger title="删除旧版本"
+                text={deleting ? `删除 v${deleting.revision} 的发布记录？当前公开版本不受影响；已上传的资源文件不会删除。` : ''}
+                confirmLabel="删除" busy={busy} onClose={() => setDeleting(null)} onConfirm={remove} />
         </Box>
     );
 }
@@ -877,7 +896,8 @@ export default function WorkshopPage({ session, onLogout, notify }) {
                 {tab === 'modules' && <ModulesTab workshopId={workshop.id} modules={modules} onRefresh={load} notify={notify} />}
                 {tab === 'packs' && <PacksTab workshopId={workshop.id} packs={packs} modules={modules} onRefresh={load} notify={notify} />}
                 {tab === 'hosting' && <HostingTab workshop={workshop} onSaved={load} notify={notify} />}
-                {tab === 'history' && <HistoryTab workshopId={workshop.id} releases={releases} onRefresh={load} notify={notify} />}
+                {tab === 'history' && <HistoryTab workshopId={workshop.id} releases={releases}
+                    current={workshop.publishedRevision} onRefresh={load} notify={notify} />}
             </Box>
             <PublishDialog open={publishOpen} workshopId={workshop.id}
                 onClose={() => setPublishOpen(false)} onPublished={load} notify={notify} />
